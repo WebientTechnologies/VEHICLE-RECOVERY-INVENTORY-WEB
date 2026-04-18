@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:4000/backend/api/v1';
+const API_URL = 'https://admin.vinayak-associates.com/backend/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_URL,
