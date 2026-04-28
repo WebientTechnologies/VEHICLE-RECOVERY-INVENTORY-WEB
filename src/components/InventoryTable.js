@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Download, Loader2, Printer, Eye, X } from 'lucide-react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export default function InventoryTable({ data, loading, progress = 0 }) {
   const [localStatusFilter, setLocalStatusFilter] = useState('All');
@@ -65,7 +65,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
       tableRows.push(rowData);
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       theme: 'grid',
@@ -149,7 +149,8 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
   };
 
   return (
-    <div className="glass-panel" style={{ overflowX: 'auto', padding: '16px' }}>
+    <>
+      <div className="glass-panel" style={{ overflowX: 'auto', padding: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 8px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 'bold' }}>Inventory Records ({filteredData.length})</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -247,6 +248,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
           ))}
         </tbody>
       </table>
+      </div>
 
       {showPreview && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px' }}>
@@ -310,6 +312,6 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
