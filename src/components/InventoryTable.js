@@ -1,11 +1,14 @@
 "use client";
 import React, { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Printer, Eye, X } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function InventoryTable({ data, loading, progress = 0 }) {
   const [localStatusFilter, setLocalStatusFilter] = useState('All');
   const [isFiltering, setIsFiltering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleStatusChange = (e) => {
     const val = e.target.value;
@@ -44,6 +47,34 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
     if (localStatusFilter === 'Out') return item.status?.toLowerCase() === 'out';
     return true;
   });
+
+  const printColumns = ['regNo', 'borrower', 'agreementNo', 'model', 'engineNo', 'chasisNo'];
+
+  const printToPDF = () => {
+    if (filteredData.length === 0) return;
+    
+    const doc = new jsPDF();
+    const tableColumn = printColumns.map(col => col.replace(/([A-Z])/g, ' $1').trim().toUpperCase());
+    const tableRows = [];
+
+    filteredData.forEach(item => {
+      const rowData = printColumns.map(col => {
+        let val = item[col];
+        return val === null || val === undefined || val === '' ? 'N/A' : String(val);
+      });
+      tableRows.push(rowData);
+    });
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [15, 23, 42] }
+    });
+
+    doc.save(`Inventory_Print_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   // Dynamically extract all unique keys from all objects in filteredData (or original data so columns aren't lost)
   const hiddenKeys = ['_id', 'yardObjectId', 'bankObjectId', '__v'];
@@ -139,6 +170,20 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
             </div>
           </div>
           <button 
+            onClick={() => setShowPreview(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#3b82f6', color: 'white', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}
+          >
+            <Eye size={16} />
+            Preview
+          </button>
+          <button 
+            onClick={printToPDF}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#8b5cf6', color: 'white', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}
+          >
+            <Printer size={16} />
+            Print
+          </button>
+          <button 
             onClick={exportToCSV}
             disabled={isExporting}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#10b981', color: 'white', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', transition: 'background 0.2s', cursor: isExporting ? 'not-allowed' : 'pointer', border: 'none', opacity: isExporting ? 0.7 : 1 }}
@@ -202,6 +247,69 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
           ))}
         </tbody>
       </table>
+
+      {showPreview && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px' }}>
+          <div className="glass-panel" style={{ background: '#1e293b', width: '100%', maxWidth: '1000px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white' }}>Data Preview</h3>
+              <button onClick={() => setShowPreview(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={24} />
+              </button>
+            </div>
+            <div style={{ padding: '0', overflowY: 'auto', flex: 1 }}>
+              <table style={{ borderCollapse: 'collapse', textAlign: 'left', minWidth: '100%', width: '100%' }}>
+                <thead style={{ position: 'sticky', top: 0, background: '#0f172a', zIndex: 10 }}>
+                  <tr>
+                    {printColumns.map(key => (
+                      <th key={key} style={{ padding: '12px 16px', fontWeight: '600', fontSize: '13px', color: 'var(--text-muted)', borderBottom: '1px solid var(--glass-border-color)', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((item, index) => (
+                    <tr key={item._id || index} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      {printColumns.map(key => {
+                        let displayValue = item[key] === null || item[key] === undefined || item[key] === '' ? 'N/A' : String(item[key]);
+                        return (
+                          <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap', color: 'var(--text-color)' }}>
+                            {displayValue}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {filteredData.length === 0 && (
+                    <tr>
+                      <td colSpan={printColumns.length} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No data available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyItems: 'flex-end', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                onClick={() => setShowPreview(false)}
+                style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', border: 'none' }}
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => {
+                  printToPDF();
+                  setShowPreview(false);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#8b5cf6', color: 'white', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', border: 'none' }}
+              >
+                <Printer size={16} />
+                Print PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
