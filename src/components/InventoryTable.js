@@ -1,9 +1,7 @@
 "use client";
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, Loader2, Printer, Eye, X } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
 export default function InventoryTable({ data, loading, progress = 0 }) {
   const [localStatusFilter, setLocalStatusFilter] = useState('All');
   const [isFiltering, setIsFiltering] = useState(false);
@@ -50,30 +48,38 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
 
   const printColumns = ['regNo', 'borrower', 'agreementNo', 'model', 'engineNo', 'chasisNo'];
 
-  const printToPDF = () => {
+  const printToPDF = async () => {
     if (filteredData.length === 0) return;
     
-    const doc = new jsPDF();
-    const tableColumn = printColumns.map(col => col.replace(/([A-Z])/g, ' $1').trim().toUpperCase());
-    const tableRows = [];
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
 
-    filteredData.forEach(item => {
-      const rowData = printColumns.map(col => {
-        let val = item[col];
-        return val === null || val === undefined || val === '' ? 'N/A' : String(val);
+      const doc = new jsPDF();
+      const tableColumn = printColumns.map(col => col.replace(/([A-Z])/g, ' $1').trim().toUpperCase());
+      const tableRows = [];
+
+      filteredData.forEach(item => {
+        const rowData = printColumns.map(col => {
+          let val = item[col];
+          return val === null || val === undefined || val === '' ? 'N/A' : String(val);
+        });
+        tableRows.push(rowData);
       });
-      tableRows.push(rowData);
-    });
 
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [15, 23, 42] }
-    });
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [15, 23, 42] }
+      });
 
-    doc.save(`Inventory_Print_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`Inventory_Print_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error("PDF Generation Error:", err);
+      alert("Failed to generate PDF. Check console for details.");
+    }
   };
 
   // Dynamically extract all unique keys from all objects in filteredData (or original data so columns aren't lost)
@@ -250,7 +256,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
       </table>
       </div>
 
-      {showPreview && (
+      {showPreview && typeof document !== 'undefined' && createPortal(
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px' }}>
           <div className="glass-panel" style={{ background: '#1e293b', width: '100%', maxWidth: '1000px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -310,7 +316,8 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
