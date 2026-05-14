@@ -120,28 +120,52 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
     setPdfLoading(loadingKey);
     try {
       const remotePdfUrl = await generateInventoryPdf(item.regNo, item._id);
-
+      
       if (actionType === 'view') {
         window.open(remotePdfUrl, '_blank');
       } else if (actionType === 'download' || actionType === 'print') {
         const response = await fetch(remotePdfUrl);
-        const blob = await response.blob();
+        const arrayBuffer = await response.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
         const localUrl = URL.createObjectURL(blob);
 
         if (actionType === 'download') {
-          const link = document.createElement('a');
-          link.href = localUrl;
-          link.setAttribute('download', `Inventory_${item.regNo}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          try {
+            if (window.showSaveFilePicker) {
+              const handle = await window.showSaveFilePicker({
+                suggestedName: `Inventory_${item.regNo}.pdf`,
+                types: [{
+                  description: 'PDF Document',
+                  accept: { 'application/pdf': ['.pdf'] },
+                }],
+              });
+              const writable = await handle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+            } else {
+              const link = document.createElement('a');
+              link.href = localUrl;
+              link.setAttribute('download', `Inventory_${item.regNo}.pdf`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.error("Download failed:", err);
+              throw err;
+            }
+          }
         } else if (actionType === 'print') {
           const iframe = document.createElement('iframe');
           iframe.style.display = 'none';
           iframe.src = localUrl;
           document.body.appendChild(iframe);
           iframe.onload = () => {
-            iframe.contentWindow.print();
+            setTimeout(() => {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+            }, 500); // Give PDF renderer time to load
           };
         }
       }
