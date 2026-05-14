@@ -65,3 +65,16 @@ export const fetchInventory = async (params) => {
   }
 };
 
+export const generateInventoryPdf = async (regNo, inventoryId) => {
+  try {
+    const response = await apiClient.get('/generatePdf', {
+      params: { regNo, inventoryId }
+    });
+    const fileName = response.data.fileName;
+    return `https://admin.vinayak-associates.com/backend/uploads/${fileName}`;
+  } catch (error) {
+    console.error("Error generating PDF", error);
+    throw error;
+  }
+};
+
