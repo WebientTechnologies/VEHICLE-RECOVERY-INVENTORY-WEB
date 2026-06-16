@@ -181,19 +181,32 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
     setIsExporting(true);
 
     setTimeout(() => {
-      const headers = sortedKeys.map(k => k.replace(/([A-Z])/g, ' $1').trim().toUpperCase()).join(',');
+      // Extra columns appended to export
+      const extraExportColumns = [
+        { header: 'IN NAME', field: 'repoAgentName' },
+        { header: 'AGENCY NAME', field: 'repoAgency' },
+      ];
+
+      const baseHeaders = sortedKeys.map(k => k.replace(/([A-Z])/g, ' $1').trim().toUpperCase());
+      const allHeaders = [...baseHeaders, ...extraExportColumns.map(c => c.header)].join(',');
 
       const rows = filteredData.map(item => {
-        return sortedKeys.map(key => {
+        const baseCols = sortedKeys.map(key => {
           let val = formatCellData(key, item[key]);
-
-          // Escape quotes to prevent CSV breakage
           val = val.replace(/"/g, '""');
           return `"${val}"`;
-        }).join(',');
+        });
+
+        const extraCols = extraExportColumns.map(({ field }) => {
+          let val = formatCellData(field, item[field]);
+          val = val.replace(/"/g, '""');
+          return `"${val}"`;
+        });
+
+        return [...baseCols, ...extraCols].join(',');
       });
 
-      const csvContent = [headers, ...rows].join('\n');
+      const csvContent = [allHeaders, ...rows].join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
 
@@ -257,8 +270,8 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
         <table style={{ borderCollapse: 'collapse', textAlign: 'left', minWidth: 'max-content', width: '100%' }}>
           <thead>
             <tr style={{ background: 'rgba(15, 23, 42, 0.5)' }}>
-              {sortedKeys.map(key => (
-                <th key={key} style={{ padding: '12px 16px', fontWeight: '600', fontSize: '13px', color: 'var(--text-muted)', borderBottom: '1px solid var(--glass-border-color)', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+              {sortedKeys.map((key, i) => (
+                <th key={key} style={{ padding: '12px 16px', fontWeight: '600', fontSize: '13px', color: 'var(--text-muted)', borderBottom: '1px solid var(--glass-border-color)', borderRight: '1px solid rgba(255,255,255,0.07)', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
                   {key === 'chasisNo' ? 'Chassis No' : key.replace(/([A-Z])/g, ' $1').trim()}
                 </th>
               ))}
@@ -276,7 +289,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
                   // Special styling for specific columns
                   if (key === 'status') {
                     return (
-                      <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                      <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
                         <span style={{
                           background: displayValue.toLowerCase() === 'in' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                           color: displayValue.toLowerCase() === 'in' ? '#4ade80' : '#f87171',
@@ -293,7 +306,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
 
                   if (key === 'regNo') {
                     return (
-                      <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                      <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
                         <span style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold' }}>
                           {displayValue}
                         </span>
@@ -302,7 +315,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
                   }
 
                   return (
-                    <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <td key={key} style={{ padding: '16px', fontSize: '14px', whiteSpace: 'nowrap', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', borderRight: '1px solid rgba(255,255,255,0.07)' }}>
                       {displayValue}
                     </td>
                   );
