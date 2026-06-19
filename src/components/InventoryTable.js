@@ -120,7 +120,7 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
     setPdfLoading(loadingKey);
     try {
       const remotePdfUrl = await generateInventoryPdf(item.regNo, item._id);
-      
+
       if (actionType === 'view') {
         window.open(remotePdfUrl, '_blank');
       } else if (actionType === 'download' || actionType === 'print') {
@@ -183,8 +183,11 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
     setTimeout(() => {
       // Extra columns appended to export
       const extraExportColumns = [
+        { header: 'MAKE', field: 'asset' },
         { header: 'IN NAME', field: 'repoAgentName' },
         { header: 'AGENCY NAME', field: 'repoAgency' },
+        { header: 'BANK NAME', field: 'bankName' },
+        { header: 'ENTRY DATE', field: 'entryDate' },
       ];
 
       const baseHeaders = sortedKeys.map(k => k.replace(/([A-Z])/g, ' $1').trim().toUpperCase());
@@ -198,7 +201,11 @@ export default function InventoryTable({ data, loading, progress = 0 }) {
         });
 
         const extraCols = extraExportColumns.map(({ field }) => {
-          let val = formatCellData(field, item[field]);
+          // bankName is nested inside bankObjectId
+          let rawVal = field === 'bankName'
+            ? (item.bankObjectId?.bankName ?? '')
+            : item[field];
+          let val = formatCellData(field, rawVal);
           val = val.replace(/"/g, '""');
           return `"${val}"`;
         });
